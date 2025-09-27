@@ -1,0 +1,46 @@
+# Ignorar carpetas y archivos comunes de Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/Assets/AssetStoreTools/
+
+# Logs y archivos de configuración local
+/Logs/
+/UserSettings/
+
+# Archivos específicos de Unity
+.csproj
+.unityproj
+.sln
+.suo
+.user
+.userprefs
+.DS_Store
+.idea/
+
+# Archivos generados por builds o por plataformas
+*.apk
+*.aab
+*.unitypackage
+
+# Archivos temporales de metadatos (a veces problematicos, pueden ser necesarios)
+# Si tienes problemas, puedes eliminarlos de la lista.
+*.pid
+*.boop
+
+# Ignorar el archivo de licencia de proyecto si es específico de tu máquina
+# ProjectSettings/ProjectVersion.txt # Descomenta si quieres ignorarlo
+
+# Excluir la carpeta Packages si es manejada por UPM (Unity Package Manager)
+# /Packages/
+
+# Carpetas generadas por IDEs comunes como Rider o VSCode
+.vs/
+
+# Archivos generados por Windows/Mac (innecesarios en Linux/Ubuntu)
+Thumbs.db
+
+# Archivos generados por Unity Hub
+/ProjectSettings/
