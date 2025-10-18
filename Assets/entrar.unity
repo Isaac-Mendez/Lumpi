@@ -131,7 +131,6 @@ GameObject:
   - component: {fileID: 45383206}
   - component: {fileID: 45383205}
   - component: {fileID: 45383207}
-  - component: {fileID: 45383208}
   m_Layer: 5
   m_Name: contrasena
   m_TagString: Untagged
@@ -298,23 +297,6 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
---- !u!114 &45383208
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 45383203}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a2bc3f19fcda011d82b7e7417bef93a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  usuario: {fileID: 876850094}
-  contrasena: {fileID: 45383207}
-  Entrar: {fileID: 1744544673}
-  usuarioCorrecto: admin
-  passwordCorrecto: 1234
 --- !u!1 &181733369
 GameObject:
   m_ObjectHideFlags: 0
@@ -1003,7 +985,6 @@ GameObject:
   - component: {fileID: 876850093}
   - component: {fileID: 876850092}
   - component: {fileID: 876850094}
-  - component: {fileID: 876850095}
   m_Layer: 5
   m_Name: usuarios
   m_TagString: Untagged
@@ -1170,23 +1151,6 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
---- !u!114 &876850095
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 876850090}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a2bc3f19fcda011d82b7e7417bef93a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  usuario: {fileID: 876850094}
-  contrasena: {fileID: 45383207}
-  Entrar: {fileID: 1744544673}
-  usuarioCorrecto: admin
-  passwordCorrecto: 1234
 --- !u!1 &1012648143
 GameObject:
   m_ObjectHideFlags: 0
@@ -1782,7 +1746,6 @@ GameObject:
   - component: {fileID: 1744544675}
   - component: {fileID: 1744544674}
   - component: {fileID: 1744544673}
-  - component: {fileID: 1744544677}
   m_Layer: 5
   m_Name: Entrar
   m_TagString: Untagged
@@ -1892,23 +1855,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0.000022888, y: -543}
   m_SizeDelta: {x: 553.4535, y: 129.4998}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1744544677
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1744544672}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a2bc3f19fcda011d82b7e7417bef93a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  usuario: {fileID: 876850094}
-  contrasena: {fileID: 45383207}
-  Entrar: {fileID: 1744544673}
-  usuarioCorrecto: admin
-  passwordCorrecto: 1234
 --- !u!1 &2041916786
 GameObject:
   m_ObjectHideFlags: 0
