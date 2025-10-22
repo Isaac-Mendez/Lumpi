@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 5b4f7bc8fb60e3b7998344d4d90fae78
+guid: 6be4262221b86a80a9168ffe92d75d1c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8554973395424749807
-    second: Imagen pegada (15)_0
+      213: 1055603973042131810
+    second: Imagen pegada (19)_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Imagen pegada (15)_0
+      name: Imagen pegada (19)_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 330
-        height: 703
+        width: 324
+        height: 713
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: fe8a5391afe59b670800000000000000
-      internalID: 8554973395424749807
+      spriteID: 263daac783246ae00800000000000000
+      internalID: 1055603973042131810
       vertices: []
       indices: 
       edges: []
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Imagen pegada (15)_0: 8554973395424749807
+      Imagen pegada (19)_0: 1055603973042131810
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

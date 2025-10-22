@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/entrar.unity
     guid: 30ad32c9c9e9e9ffdadde89838605454
+  - enabled: 1
+    path: Assets/registro_del_login.unity
+    guid: 2b0ae1e612d42edcb8b139d91213b06a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
