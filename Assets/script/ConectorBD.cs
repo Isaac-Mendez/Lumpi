@@ -1,28 +1,30 @@
 using UnityEngine;
 using MySql.Data.MySqlClient; 
 using TMPro;
+using System.Data; 
+using UnityEngine.SceneManagement; 
 
 public class ConectorBD : MonoBehaviour
 {
     // *** CONFIGURACIÓN DE LA BASE DE DATOS ***
     private string server = "localhost"; 
-    private string database = "Lumpi_0.1"; // Asegúrate de que sea EXACTAMENTE el nombre de tu BD
+    private string database = "Lumpi_0.1"; 
     private string uid = "root";         
     private string password = "";        
     
     private MySqlConnection dbconnection; 
 
-    // *** VARIABLES PÚBLICAS PARA EL FORMULARIO ***
+    // *** VARIABLES PÚBLICAS PARA EL FORMULARIO DE REGISTRO ***
+    [Header("Formulario de Registro (Inputs)")]
     public TMP_InputField inputNombre;
     public TMP_InputField inputApellidos;
     public TMP_InputField inputTelefono;
     public TMP_InputField inputCorreo;
     public TMP_InputField inputContrasena;
 
-    // *** NUEVA REFERENCIA PARA EL MENSAJE DE ERROR EN PANTALLA ***
+    // *** REFERENCIAS PARA LOS MENSAJES EN PANTALLA ***
+    [Header("Mensajes UI")]
     public TextMeshProUGUI textoMensajeError; 
-    
-    // *** REFERENCIA PARA EL MENSAJE DE ÉXITO EN PANTALLA (Opcional) ***
     public TextMeshProUGUI textoMensajeExito; 
 
 
@@ -31,14 +33,44 @@ public class ConectorBD : MonoBehaviour
         // Ocultar mensajes de error y éxito al inicio
         if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
         if (textoMensajeExito != null) textoMensajeExito.gameObject.SetActive(false);
-        
-        // El trabajo de conexión se realiza en la función RegistrarUsuarioDesdeFormulario
     }
+    
+    // --- FUNCIÓN DE CONEXIÓN BÁSICA ---
+    private bool OpenConnection()
+    {
+        string connectionString = $"Server={server};Database={database};Uid={uid};Pwd={password};SslMode=None;AllowUserVariables=True;";
+        dbconnection = new MySqlConnection(connectionString);
+
+        try
+        {
+            dbconnection.Open();
+            return true;
+        }
+        catch (MySqlException ex)
+        {
+            MostrarMensaje("🔴 Error de Conexión: Verifica que XAMPP esté activo.", true);
+            Debug.LogError($"Error de Conexión ({ex.Number}): {ex.Message}");
+            return false;
+        }
+    }
+
+    private void CloseConnection()
+    {
+        if (dbconnection != null && dbconnection.State == ConnectionState.Open)
+        {
+            dbconnection.Close();
+        }
+    }
+
+
+    // =========================================================================
+    //                            FUNCIONES DE REGISTRO
+    // =========================================================================
 
     // --- 1. FUNCIÓN QUE SE LLAMA AL PRESIONAR EL BOTÓN "REGISTRARSE" ---
     public void RegistrarUsuarioDesdeFormulario()
     {
-        // Ocultar mensajes anteriores
+        // Limpiar mensajes
         if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
         if (textoMensajeExito != null) textoMensajeExito.gameObject.SetActive(false);
 
@@ -49,11 +81,9 @@ public class ConectorBD : MonoBehaviour
         string correo = inputCorreo.text.Trim();
         string contrasena = inputContrasena.text.Trim();
 
-        // 2. Validación: Verificar que los campos obligatorios NO estén vacíos
-        if (string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(contrasena))
+        // 2. Validación: Verificar datos antes de tocar la BD 
+        if (!ValidarDatosDeRegistro(nombre, apellidos, telefono, correo, contrasena))
         {
-            // Mostrar error de validación en la UI
-            MostrarMensaje("🔴 Error: Nombre, Correo y Contraseña son obligatorios.", true);
             return; 
         }
 
@@ -61,18 +91,37 @@ public class ConectorBD : MonoBehaviour
         InsertarNuevoUsuario(nombre, apellidos, telefono, correo, contrasena);
     }
 
+    // --- FUNCIÓN PARA LA VALIDACIÓN DE CAMPOS VACÍOS EN C# ---
+    private bool ValidarDatosDeRegistro(string nombre, string apellidos, string telefono, string correo, string contrasena)
+    {
+        // VALIDACIÓN 1: Campo vacío (Mensaje genérico)
+        if (string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(apellidos) || string.IsNullOrEmpty(telefono) || string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(contrasena))
+        {
+            // Muestra el mensaje genérico cuando falta un dato, tal como solicitaste.
+            MostrarMensaje("🔴 Error: Por favor, rellena todos los datos del formulario.", true);
+            return false; 
+        }
 
-    // --- 2. FUNCIÓN PARA INSERTAR DATOS EN MySQL ---
+        // VALIDACIÓN 2: Campo Teléfono solo números (Previene el error 'Incorrect Integer Value' para Teléfono)
+        // Solo verificamos si no está vacío (ya lo hicimos arriba) y si no es un número.
+        if (!int.TryParse(telefono, out int result))
+        {
+            // Si el teléfono tiene texto, interceptamos el error aquí, antes de la BD.
+            MostrarMensaje("🔴 Error: El formulario tiene datos incorrectos. Por favor, verifíquelo.", true);
+            return false;
+        }
+        
+        return true;
+    }
+
+
+    // --- 3. FUNCIÓN PARA INSERTAR DATOS EN MySQL ---
     public void InsertarNuevoUsuario(string nombre, string apellidos, string telefono, string correo, string contrasena)
     {
-        string connectionString = $"Server={server};Database={database};Uid={uid};Pwd={password};SslMode=None;AllowUserVariables=True;";
-        dbconnection = new MySqlConnection(connectionString);
+        if (!OpenConnection()) return; // Falla si no conecta
 
         try
         {
-            dbconnection.Open();
-            Debug.Log("Conexión a MySQL abierta para registro.");
-            
             string sql = "INSERT INTO registro_del_login (Nombre, Apellidos, Telefono, Correo, Contraseña) VALUES (@nombre, @apellidos, @telefono, @correo, @contrasena)";
 
             MySqlCommand command = new MySqlCommand(sql, dbconnection);
@@ -98,19 +147,23 @@ public class ConectorBD : MonoBehaviour
         }
         catch (MySqlException ex)
         {
-            // Manejar errores comunes de BD y mostrarlos en la UI
             string mensajeError;
-            if (ex.Number == 1062) // Código de error: Duplicado (ej. si el correo es único y se repite)
+            
+            // CÓDIGO CLAVE: Intercepta errores de tipo de dato (el "garabato") y de claves duplicadas
+            if (ex.Number == 1062) // Código de error: Duplicado (si el Correo es UNIQUE)
             {
                 mensajeError = "🔴 Error: Este correo electrónico ya está registrado.";
             }
-            else if (ex.Number == 1045) // Error de autenticación/conexión (aunque ya lo corregimos, mejor prevenir)
+            // Error 1366: Código genérico para "Incorrect String Value" o "Incorrect Integer Value" (el garabato)
+            else if (ex.Number == 1366) 
             {
-                mensajeError = "🔴 Error de conexión a la base de datos. Verifica tu servidor.";
+                // Reemplaza el mensaje técnico con el mensaje simple que solicitaste.
+                mensajeError = "🔴 Error: El formulario tiene datos incorrectos. Por favor, verifíquelo.";
             }
             else
             {
-                mensajeError = $"🔴 Error de registro: {ex.Message}";
+                // Para cualquier otro error inesperado de la BD
+                mensajeError = $"🔴 Error de registro inesperado (Código {ex.Number}).";
             }
             
             Debug.LogError($"❌ Error al insertar usuario (Código {ex.Number}): {ex.Message}");
@@ -118,10 +171,7 @@ public class ConectorBD : MonoBehaviour
         }
         finally
         {
-            if (dbconnection != null && dbconnection.State == System.Data.ConnectionState.Open)
-            {
-                dbconnection.Close();
-            }
+            CloseConnection();
         }
     }
     
@@ -151,4 +201,13 @@ public class ConectorBD : MonoBehaviour
             Debug.Log($"Mensaje UI ({ (isError ? "Error" : "Éxito") }): {mensaje}");
         }
     }
+    
+    // Asegura que la conexión se cierre si la aplicación se cierra
+    private void OnApplicationQuit()
+    {
+        CloseConnection();
+    }
+    
+    // NOTA: Si utilizas las funciones de Login, deberás copiar y pegar la lógica de Login 
+    // y la referencia a los InputFields de Login, como te mostré en el código anterior.
 }
