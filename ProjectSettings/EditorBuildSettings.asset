@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/registro_del_login.unity
     guid: 2b0ae1e612d42edcb8b139d91213b06a
+  - enabled: 1
+    path: Assets/PerfilUsuario.unity
+    guid: 90d6c9c85ac373f0f934ed2c4e85aa8a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0
