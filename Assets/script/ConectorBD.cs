@@ -3,13 +3,17 @@ using MySql.Data.MySqlClient;
 using TMPro;
 using System.Data; 
 using UnityEngine.SceneManagement; 
-using System.Collections.Generic; // REQUERIDO: Añadido para usar Dictionary en GetUserData
+using System.Collections;
+using System.Collections.Generic;
 
 public class ConectorBD : MonoBehaviour
 {
+    // *** Singleton: Instancia estática para acceso global ***
+    public static ConectorBD Instance { get; private set; } 
+
     // *** CONFIGURACIÓN DE LA BASE DE DATOS ***
     private string server = "localhost"; 
-    private string database = "Lumpi_0.1"; 
+    private string database = "Lumpi_0.1";
     private string uid = "root";         
     private string password = "";        
     
@@ -18,8 +22,9 @@ public class ConectorBD : MonoBehaviour
     // *** VARIABLE ESTÁTICA PARA MANTENER LA SESIÓN ***
     public static string UsuarioLogueadoCorreo { get; private set; } 
 
-    // *** VARIABLES PÚBLICAS PARA EL FORMULARIO DE REGISTRO/LOGIN ***
+    // *** VARIABLES PÚBLICAS (Inputs) ***
     [Header("Formulario de Registro/Login (Inputs)")]
+    // Estos inputs deben estar enlazados en la escena 'registro_del_login' o 'entrar'
     public TMP_InputField inputNombre;
     public TMP_InputField inputApellidos;
     public TMP_InputField inputTelefono;
@@ -31,17 +36,42 @@ public class ConectorBD : MonoBehaviour
     public TextMeshProUGUI textoMensajeError; 
     public TextMeshProUGUI textoMensajeExito; 
 
+    void Awake()
+    {
+        // 🔑 IMPLEMENTACIÓN DEL SINGLETON:
+        if (Instance == null)
+        {
+            Instance = this;
+            // Aseguramos que el gestor de BD persista entre escenas
+            DontDestroyOnLoad(gameObject); 
+            Debug.Log("✅ ConectorBD inicializado correctamente y marcado como DontDestroyOnLoad.");
+
+            // 🛑 NUEVA LÓGICA DE INICIALIZACIÓN DE ESCENA (Paso B)
+            // Asumimos que la escena de bienvenida es la que contiene este objeto al inicio.
+            string currentScene = SceneManager.GetActiveScene().name;
+            
+            // Si la escena actual es "login" (o la que tú uses como InitScene), cargamos la siguiente.
+            if (currentScene == "login") 
+            {
+                // Cargamos la escena donde el usuario empieza a interactuar (el formulario de entrada/login)
+                Debug.Log($"➡️ Iniciando con escena '{currentScene}'. Cargando: entrar.");
+                SceneManager.LoadScene("entrar"); 
+            }
+        }
+        else
+        {
+            // Destruimos duplicados
+            Destroy(gameObject);
+            return;
+        }
+    }
 
     void Start()
     {
-        // Ocultar mensajes de error y éxito al inicio
         if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
         if (textoMensajeExito != null) textoMensajeExito.gameObject.SetActive(false);
-        
-        // OPCIONAL: Esto asegura que el gestor de BD persista entre escenas
-        // DontDestroyOnLoad(gameObject); 
     }
-    
+
     // --- FUNCIÓN DE CONEXIÓN BÁSICA ---
     private bool OpenConnection()
     {
@@ -69,12 +99,7 @@ public class ConectorBD : MonoBehaviour
         }
     }
 
-
-    // =========================================================================
-    //                            FUNCIONES DE REGISTRO
-    // =========================================================================
-
-    // --- 1. FUNCIÓN QUE SE LLAMA AL PRESIONAR EL BOTÓN "REGISTRARSE" ---
+    // =============================== REGISTRO ===============================
     public void RegistrarUsuarioDesdeFormulario()
     {
         if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
@@ -86,36 +111,38 @@ public class ConectorBD : MonoBehaviour
         string correo = inputCorreo.text.Trim();
         string contrasena = inputContrasena.text.Trim();
 
-        if (!ValidarDatosDeRegistro(nombre, apellidos, telefono, correo, contrasena))
-        {
-            return; 
-        }
+        // **NOTA DE MODIFICACIÓN:** Las validaciones deben ser flexibles con el teléfono (VARCHAR)
+        if (!ValidarDatosDeRegistro(nombre, apellidos, telefono, correo, contrasena)) return; 
 
         InsertarNuevoUsuario(nombre, apellidos, telefono, correo, contrasena);
     }
 
-    // --- FUNCIÓN PARA LA VALIDACIÓN DE CAMPOS VACÍOS EN C# ---
     private bool ValidarDatosDeRegistro(string nombre, string apellidos, string telefono, string correo, string contrasena)
     {
-        // VALIDACIÓN 1: Campo vacío (Mensaje genérico)
-        if (string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(apellidos) || string.IsNullOrEmpty(telefono) || string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(contrasena))
+        // Validación de campos obligatorios
+        if (string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(contrasena))
         {
-            MostrarMensaje("🔴 Error: Por favor, rellena todos los datos del formulario.", true);
+            MostrarMensaje("🔴 Error: Nombre, Correo y Contraseña son obligatorios.", true);
             return false; 
         }
 
-        // VALIDACIÓN 2: Campo Teléfono solo números 
-        if (!long.TryParse(telefono, out long result)) 
+        // Permitimos que teléfono sea cadena (VARCHAR), pero no vacío si es obligatorio
+        if (string.IsNullOrEmpty(telefono)) 
         {
-            MostrarMensaje("🔴 Error: El formulario tiene datos incorrectos. Por favor, verifíquelo.", true);
+            MostrarMensaje("🔴 Error: Por favor, rellena el campo Teléfono.", true);
             return false;
         }
+        
+        // ❌ ELIMINAMOS la validación de solo números, ya que la columna es VARCHAR
+        // if (!long.TryParse(telefono, out long result)) 
+        // {
+        //     MostrarMensaje("🔴 Error: El teléfono debe contener solo números.", true);
+        //     return false;
+        // }
         
         return true;
     }
 
-
-    // --- 3. FUNCIÓN PARA INSERTAR DATOS EN MySQL ---
     public void InsertarNuevoUsuario(string nombre, string apellidos, string telefono, string correo, string contrasena)
     {
         if (!OpenConnection()) return; 
@@ -132,32 +159,27 @@ public class ConectorBD : MonoBehaviour
             command.Parameters.AddWithValue("@correo", correo);
             command.Parameters.AddWithValue("@contrasena", contrasena);
 
-            int rowsAffected = command.ExecuteNonQuery();
+            command.ExecuteNonQuery();
             
-            MostrarMensaje($"✅ Usuario {nombre} registrado con éxito.", false);
+            MostrarMensaje($"✅ Usuario {nombre} registrado con éxito. ¡Ya puedes iniciar sesión!", false);
 
+            // Limpia los campos
             inputNombre.text = "";
             inputApellidos.text = "";
             inputTelefono.text = "";
             inputCorreo.text = "";
             inputContrasena.text = "";
+            
+            // Opcional: Redirige al login después de un registro exitoso
+            // StartCoroutine(CargarEscenaConDelay("entrar", 1.5f)); 
         }
         catch (MySqlException ex)
         {
             string mensajeError;
             
-            if (ex.Number == 1062) 
-            {
-                mensajeError = "🔴 Error: Este correo electrónico ya está registrado.";
-            }
-            else if (ex.Number == 1366) 
-            {
-                mensajeError = "🔴 Error: El formulario tiene datos incorrectos. Por favor, verifíquelo.";
-            }
-            else
-            {
-                mensajeError = $"🔴 Error de registro inesperado (Código {ex.Number}).";
-            }
+            if (ex.Number == 1062) mensajeError = "🔴 Error: Este correo electrónico ya está registrado.";
+            else if (ex.Number == 1366) mensajeError = "🔴 Error en el formato de datos (ej. Teléfono no es número). Verifica phpMyAdmin."; // Código de error de tipo incorrecto
+            else mensajeError = $"🔴 Error de registro inesperado. Intente de nuevo. (Código: {ex.Number})";
             
             Debug.LogError($"❌ Error al insertar usuario (Código {ex.Number}): {ex.Message}");
             MostrarMensaje(mensajeError, true);
@@ -167,29 +189,44 @@ public class ConectorBD : MonoBehaviour
             CloseConnection();
         }
     }
-    
-    // =========================================================================
-    //                            FUNCIONES DE LOGIN Y SESIÓN
-    // =========================================================================
 
-    public void VerificarLoginDesdeFormulario()
+    // ================================ LOGIN ================================
+    
+    public void VerificarLoginDesdeFormulario(string escenaDestino) 
     {
+        if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
+        if (textoMensajeExito != null) textoMensajeExito.gameObject.SetActive(false);
+
+        if (inputCorreo == null || inputContrasena == null)
+        {
+             Debug.LogError("🔴 Error: Los campos de Correo o Contraseña no están asignados por el script de la escena.");
+             MostrarMensaje("🔴 Error: Configuración de la escena 'entrar' incorrecta.", true);
+             return;
+        }
+        
         string correoIngresado = inputCorreo.text.Trim();
         string passwordIngresado = inputContrasena.text.Trim();
         
         if (CheckLogin(correoIngresado, passwordIngresado))
         {
-            MostrarMensaje("✅ ¡Login correcto! Accediendo al perfil...", false);
-            
-            // *** INICIO DE SESIÓN ***
             UsuarioLogueadoCorreo = correoIngresado; 
-            
-            SceneManager.LoadScene("PerfilUsuario"); // Carga la escena de perfil
+            Debug.Log("📨 Usuario guardado en sesión: " + UsuarioLogueadoCorreo);
+
+            MostrarMensaje("✅ ¡Login correcto! Accediendo...", false);
+
+            StartCoroutine(CargarEscenaConDelay(escenaDestino, 0.5f));
         }
         else
         {
             MostrarMensaje("🔴 Error: Correo o contraseña incorrectos.", true);
         }
+    }
+
+    private IEnumerator CargarEscenaConDelay(string escenaDestino, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        Debug.Log("➡️ Cargando escena: " + escenaDestino);
+        SceneManager.LoadScene(escenaDestino);
     }
     
     private bool CheckLogin(string correo, string contrasena)
@@ -206,14 +243,12 @@ public class ConectorBD : MonoBehaviour
         try
         {
             object result = cmd.ExecuteScalar();
-            if (result != null)
-            {
-                loginExitoso = true;
-            }
+            if (result != null) loginExitoso = true;
         }
         catch (MySqlException ex)
         {
             Debug.LogError("Error al verificar login: " + ex.Message);
+            MostrarMensaje("🔴 Error de conexión al verificar el usuario.", true);
         }
         finally
         {
@@ -222,8 +257,8 @@ public class ConectorBD : MonoBehaviour
         
         return loginExitoso;
     }
-    
-    // --- 7. FUNCIÓN PARA CARGAR TODOS LOS DATOS DEL USUARIO (SELECT) ---
+
+    // ============================= CARGAR DATOS =============================
     public Dictionary<string, string> GetUserData(string correo)
     {
         Dictionary<string, string> userData = new Dictionary<string, string>();
@@ -253,6 +288,7 @@ public class ConectorBD : MonoBehaviour
         catch (MySqlException ex)
         {
             Debug.LogError("Error al cargar datos del usuario: " + ex.Message);
+            MostrarMensaje("🔴 Error al cargar datos del perfil.", true);
         }
         finally
         {
@@ -262,15 +298,15 @@ public class ConectorBD : MonoBehaviour
         return userData;
     }
 
-    // --- 8. FUNCIÓN PARA ACTUALIZAR DATOS EN LA BASE DE DATOS (UPDATE) (NUEVO) ---
+    // ============================= ACTUALIZAR DATOS =============================
     public bool UpdateUserData(string correoAntiguo, string nuevoNombre, string nuevoApellido, string nuevoTelefono, string nuevoCorreo, string nuevaContrasena, out string mensajeError)
     {
         mensajeError = "";
         
-        // 1. Revalidación de datos sensibles antes de enviar a la BD
-        if (string.IsNullOrEmpty(nuevoNombre) || string.IsNullOrEmpty(nuevoCorreo) || string.IsNullOrEmpty(nuevaContrasena) || !long.TryParse(nuevoTelefono, out long result))
+        // Validación en C# antes de enviar a la BD (MÁS FLEXIBLE CON TELÉFONO)
+        if (string.IsNullOrEmpty(nuevoNombre) || string.IsNullOrEmpty(nuevoCorreo) || string.IsNullOrEmpty(nuevaContrasena) || string.IsNullOrEmpty(nuevoTelefono))
         {
-            mensajeError = "🔴 Error: Por favor, rellena todos los campos correctamente.";
+            mensajeError = "🔴 Error: Por favor, rellena todos los campos de perfil correctamente.";
             return false;
         }
 
@@ -297,32 +333,18 @@ public class ConectorBD : MonoBehaviour
             
             if (rowsAffected > 0)
             {
-                // Si el correo ha cambiado, actualizamos la variable estática de la sesión
-                if (correoAntiguo != nuevoCorreo)
-                {
-                    ConectorBD.UsuarioLogueadoCorreo = nuevoCorreo;
-                }
+                // Si el correo ha cambiado, actualizamos la sesión
+                if (correoAntiguo != nuevoCorreo) ConectorBD.UsuarioLogueadoCorreo = nuevoCorreo;
                 return true;
             }
-            // Si rowsAffected es 0, no hubo cambios o no se encontró el usuario.
             mensajeError = "⚠️ No se realizaron cambios o el usuario no fue encontrado.";
             return false;
 
         }
         catch (MySqlException ex)
         {
-            if (ex.Number == 1062) // Error: Duplicado (si el nuevo correo ya existe)
-            {
-                mensajeError = "🔴 Error: El nuevo correo electrónico ya está registrado por otro usuario.";
-            }
-            else if (ex.Number == 1366) // Error: Valor incorrecto (ej. texto en campo INT)
-            {
-                mensajeError = "🔴 Error: Formato de datos incorrecto. Verifica el campo Teléfono.";
-            }
-            else
-            {
-                mensajeError = $"🔴 Error al guardar: {ex.Message}";
-            }
+            if (ex.Number == 1062) mensajeError = "🔴 Error: El nuevo correo electrónico ya está registrado por otro usuario.";
+            else mensajeError = $"🔴 Error al guardar: {ex.Message}";
             
             Debug.LogError($"❌ Error de UPDATE (Código {ex.Number}): {ex.Message}");
             return false;
@@ -333,12 +355,7 @@ public class ConectorBD : MonoBehaviour
         }
     }
 
-
-    // =========================================================================
-    //                            FUNCIONES UTILITARIAS
-    // =========================================================================
-
-    // --- FUNCIÓN CENTRALIZADA PARA MOSTRAR MENSAJES EN PANTALLA ---
+    // ============================= UTILIDADES =============================
     void MostrarMensaje(string mensaje, bool isError)
     {
         if (isError && textoMensajeError != null)

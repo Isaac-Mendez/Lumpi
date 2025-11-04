@@ -6,113 +6,69 @@ using System.Collections.Generic;
 
 public class PerfilManager : MonoBehaviour
 {
-    [Header("Referencias de Inputs de Perfil")]
-    public TMP_InputField inputNombre;
-    public TMP_InputField inputApellidos;
-    public TMP_InputField inputTelefono;
-    public TMP_InputField inputCorreo;
-    public TMP_InputField inputContrasena;
+    [Header("Referencias de Textos de Perfil")]
+    // 🛑 MODIFICACIÓN: Cambiado de TMP_InputField a TextMeshProUGUI
+    public TextMeshProUGUI textoNombre;
+    public TextMeshProUGUI textoApellidos;
+    public TextMeshProUGUI textoTelefono;
+    public TextMeshProUGUI textoCorreo;
+    public TextMeshProUGUI textoContrasena;
     
     [Header("Referencias de UI")]
-    public Button btnGuardarCambios; 
+    // Solo se mantiene la referencia para el botón "Volver"
     public Button btnVolver; 
-    public TextMeshProUGUI textoMensaje; 
     
-    [Header("Referencias de BD")]
-    public ConectorBD dbManager; 
-    
-    private string correoOriginal; // Guarda el correo original para el UPDATE
+    private string correoOriginal; // Se mantiene solo para la carga de datos
 
     void Start()
     {
-        if (dbManager == null)
+        // 🛑 VERIFICACIÓN DIRECTA DEL SINGLETON:
+        if (ConectorBD.Instance == null || string.IsNullOrEmpty(ConectorBD.UsuarioLogueadoCorreo))
         {
-            dbManager = FindObjectOfType<ConectorBD>();
-        }
-
-        if (dbManager == null || string.IsNullOrEmpty(ConectorBD.UsuarioLogueadoCorreo))
-        {
-            Debug.LogError("No hay usuario logueado. Redirigiendo al Login.");
-            SceneManager.LoadScene("LoginScene"); // **IMPORTANTE: Cambia "LoginScene" si tu escena se llama diferente**
+            Debug.LogError("🔴 No hay usuario logueado. Redirigiendo a Entrar.");
+            SceneManager.LoadScene("entrar"); 
             return;
         }
-
-        CargarDatosUsuario(ConectorBD.UsuarioLogueadoCorreo);
-
-        btnGuardarCambios.onClick.AddListener(GuardarCambios); 
-        btnVolver.onClick.AddListener(Volver); 
         
-        textoMensaje.text = "";
+        correoOriginal = ConectorBD.UsuarioLogueadoCorreo;
+        
+        // 🔑 Carga los datos usando el correo guardado en la sesión
+        CargarDatosUsuario(correoOriginal);
+
+        // Enlazar solo el botón "Volver"
+        if (btnVolver != null) btnVolver.onClick.AddListener(Volver); 
+        
+        // ❌ ELIMINADA: La función SetInputsReadOnly() ya no es necesaria
     }
 
-    // --- Carga los datos de la BD y los muestra en los Inputs ---
+    // --- Carga los datos de la BD y los muestra en los Textos ---
     void CargarDatosUsuario(string correo)
     {
-        Dictionary<string, string> userData = dbManager.GetUserData(correo);
+        // ✅ USO DIRECTO DEL SINGLETON:
+        if (ConectorBD.Instance == null) return; 
+        
+        Dictionary<string, string> userData = ConectorBD.Instance.GetUserData(correo);
         
         if (userData.Count > 0)
         {
-            inputNombre.text = userData["nombre"];
-            inputApellidos.text = userData["apellidos"];
-            inputTelefono.text = userData["telefono"];
-            inputCorreo.text = userData["correo"];
-            inputContrasena.text = userData["contrasena"];
-            
-            correoOriginal = correo; 
+            // ✅ MODIFICACIÓN: Asignamos el valor a la propiedad .text de los TextMeshProUGUI
+            if (textoNombre != null) textoNombre.text = userData["nombre"];
+            if (textoApellidos != null) textoApellidos.text = userData["apellidos"];
+            if (textoTelefono != null) textoTelefono.text = userData["telefono"];
+            if (textoCorreo != null) textoCorreo.text = userData["correo"];
+            if (textoContrasena != null) textoContrasena.text = userData["contrasena"];
         }
         else
         {
-            MostrarMensaje("🔴 Error al cargar el perfil.", Color.red);
-        }
-    }
-
-    // --- Se ejecuta al presionar el botón "Guardar Cambios" (Lógica de UPDATE) ---
-    public void GuardarCambios()
-    {
-        // 1. Obtener los nuevos valores
-        string nuevoNombre = inputNombre.text.Trim();
-        string nuevoApellido = inputApellidos.text.Trim();
-        string nuevoTelefono = inputTelefono.text.Trim();
-        string nuevoCorreo = inputCorreo.text.Trim();
-        string nuevaContrasena = inputContrasena.text.Trim();
-        
-        string mensajeBD;
-
-        // 2. Llamar a la función de actualización de la BD
-        if (dbManager.UpdateUserData(
-            correoOriginal, 
-            nuevoNombre, 
-            nuevoApellido, 
-            nuevoTelefono, 
-            nuevoCorreo, 
-            nuevaContrasena,
-            out mensajeBD) // El mensaje de error/advertencia viene de la BD
-        )
-        {
-            MostrarMensaje("✅ Datos actualizados con éxito.", Color.green);
-            
-            // Si el correo cambió en la BD, se actualiza el identificador de la sesión actual
-            correoOriginal = ConectorBD.UsuarioLogueadoCorreo; 
-        }
-        else
-        {
-            // Muestra el error generado por el ConectorBD (incluyendo validación de vacío/formato)
-            MostrarMensaje(mensajeBD, Color.red);
+            Debug.LogError("🔴 Error al cargar el perfil. Usuario no encontrado o error de BD.");
         }
     }
     
     public void Volver()
     {
-        SceneManager.LoadScene("LoginScene"); // **IMPORTANTE: Cambia por el nombre de tu escena de menú o login**
+        // Redirige al menú principal (escena de hábitos)
+        SceneManager.LoadScene("crearhabitos"); 
     }
     
-    // --- Utilidad para mostrar mensajes con color ---
-    void MostrarMensaje(string mensaje, Color color)
-    {
-        if (textoMensaje != null)
-        {
-            textoMensaje.text = mensaje;
-            textoMensaje.color = color;
-        }
-    }
+    // ❌ ELIMINADA: La función SetInputsReadOnly()
 }

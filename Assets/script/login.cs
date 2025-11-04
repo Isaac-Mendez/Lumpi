@@ -1,36 +1,28 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
-using MySql.Data.MySqlClient; 
+using UnityEngine.SceneManagement; 
+// ⚠️ Se eliminan las referencias a MySQL (MySql.Data.MySqlClient)
 
-public class login : MonoBehaviour
+public class Login : MonoBehaviour
 {
-    // *** CONFIGURACIÓN DE LA BASE DE DATOS ***
-    private string server = "localhost"; 
-    private string database = "Lumpi_0.1"; // Tu base de datos
-    private string uid = "root";         
-    private string password = "";        // Vacío, como funcionó en el registro//
-    
-    // El objeto de conexión se declara a nivel de clase para que sea accesible
-    private MySqlConnection dbconnection; 
-
+    // Las referencias deben ser públicas para enlazarse en el Inspector
     [Header("Referencias UI")]
+    // Estos Input Fields capturan los datos de la escena 'entrar'
     public TMP_InputField usuario; // Campo de Correo
     public TMP_InputField contrasena;
     public Button Entrar;
     
-    // *** NUEVA REFERENCIA PARA MOSTRAR MENSAJES EN PANTALLA ***
-    // (Asegúrate de que este campo esté enlazado al 'MensajeErrorLogin' en el Inspector)
+    // Campo de mensaje de error específico para esta escena
     public TextMeshProUGUI textoMensajeError; 
     
-
     void Start()
     {
-        // Conectamos el botón al método VerificarLogin()
-        Entrar.onClick.AddListener(VerificarLogin);
+        // Enlaza el botón para llamar a la función de intento de login
+        if (Entrar != null)
+        {
+            Entrar.onClick.AddListener(AttemptLogin);
+        }
         
         // Ocultar el mensaje de error al iniciar la escena
         if (textoMensajeError != null)
@@ -39,62 +31,29 @@ public class login : MonoBehaviour
         }
     }
 
-    void VerificarLogin()
+    public void AttemptLogin()
     {
-        // Ocultar cualquier error anterior antes de intentar un nuevo login
-        if (textoMensajeError != null)
+        // 🛑 Paso de verificación crucial para la sesión
+        if (ConectorBD.Instance == null)
         {
-            textoMensajeError.gameObject.SetActive(false);
+            Debug.LogError("🔴 Error FATAL: ConectorBD (Singleton) no está inicializado. No se puede hacer login.");
+            MostrarError("Error crítico. Reinicie la aplicación.");
+            return;
         }
+
+        // 1. Asignar las referencias de esta escena al Singleton.
+        // Esto permite que el ConectorBD pueda leer los valores de los Inputs de esta escena.
+        ConectorBD.Instance.inputCorreo = usuario;
+        ConectorBD.Instance.inputContrasena = contrasena;
+        // Asignar el campo de mensaje de error para que el Singleton pueda escribir el error aquí
+        ConectorBD.Instance.textoMensajeError = textoMensajeError; 
         
-        string emailIngresado = usuario.text.Trim();
-        string passwordIngresada = contrasena.text.Trim();
-        
-        string connectionString = $"Server={server};Database={database};Uid={uid};Pwd={password};SslMode=None;AllowUserVariables=True;";
-        dbconnection = new MySqlConnection(connectionString);
-
-        try
-        {
-            dbconnection.Open();
-            Debug.Log("Conexión a MySQL abierta para login.");
-
-            string sql = "SELECT COUNT(*) FROM registro_del_login WHERE Correo = @email AND Contraseña = @password";
-            
-            MySqlCommand command = new MySqlCommand(sql, dbconnection);
-
-            command.Parameters.AddWithValue("@email", emailIngresado);
-            command.Parameters.AddWithValue("@password", passwordIngresada);
-
-            int userCount = System.Convert.ToInt32(command.ExecuteScalar());
-
-            if (userCount == 1)
-            {
-                Debug.Log("✅ Login correcto. Usuario encontrado.");
-                CambiarEscena("crearhabitos");
-            }
-            else
-            {
-                Debug.Log("❌ Credenciales incorrectas o usuario no encontrado.");
-                // ** Lógica para mostrar el error en pantalla **
-                MostrarError("Usuario o Contraseña incorrectos.");
-            }
-        }
-        catch (MySqlException ex)
-        {
-            Debug.LogError($"❌ Error de conexión o consulta de Login (Código {ex.Number}): {ex.Message}");
-            // ** Lógica para mostrar el error de conexión en pantalla **
-            MostrarError("Error de conexión al servidor. Intente de nuevo.");
-        }
-        finally
-        {
-            if (dbconnection != null && dbconnection.State == System.Data.ConnectionState.Open)
-            {
-                dbconnection.Close();
-            }
-        }
+        // 2. Ejecutar la lógica de Login centralizada en el Singleton.
+        // El destino después del éxito es la escena que mencionaste: "crearhabitos".
+        ConectorBD.Instance.VerificarLoginDesdeFormulario("crearhabitos");
     }
     
-    // --- NUEVA FUNCIÓN PARA MOSTRAR MENSAJE EN PANTALLA ---
+    // Función local para mostrar mensajes de error
     void MostrarError(string mensaje)
     {
         if (textoMensajeError != null)
@@ -104,6 +63,7 @@ public class login : MonoBehaviour
         }
     }
 
+    // Mantener esta función si la necesitas para redireccionar a otras escenas (ej. registro)
     public void CambiarEscena(string nombre)
     {
         SceneManager.LoadScene(nombre);

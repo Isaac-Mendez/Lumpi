@@ -8,18 +8,21 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
-  - enabled: 1
+  - enabled: 0
     path: Assets/login.unity
     guid: ab1869d223cb55dd5b90aa31a6c0eb63
   - enabled: 1
-    path: Assets/crearhabitos.unity
-    guid: 194d6c392011b3fe19b8601049e16d6e
+    path: Assets/InitScene.unity
+    guid: 739faf9d72f8aa2b98f5097d424736ca
   - enabled: 1
     path: Assets/entrar.unity
     guid: 30ad32c9c9e9e9ffdadde89838605454
   - enabled: 1
     path: Assets/registro_del_login.unity
     guid: 2b0ae1e612d42edcb8b139d91213b06a
+  - enabled: 1
+    path: Assets/crearhabitos.unity
+    guid: 194d6c392011b3fe19b8601049e16d6e
   - enabled: 1
     path: Assets/PerfilUsuario.unity
     guid: 90d6c9c85ac373f0f934ed2c4e85aa8a
