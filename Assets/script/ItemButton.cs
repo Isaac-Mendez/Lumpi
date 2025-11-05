@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -15,11 +14,14 @@ public class ItemButton : MonoBehaviour
     public Button deleteButton;
 
     [Header("Configuración")]
-    private int durationInSeconds = 3600; // 1 hora por defecto
+    private int durationInSeconds = 3600; // 1 hora por defecto (3600s)
     private int currentTime;
     private bool isRunning = false;
     private Coroutine timerCoroutine;
     private bool isEditing = false;
+    
+    // Almacena la duración total en minutos para el registro en BD
+    private int totalDurationMinutes = 60; 
 
     void Start()
     {
@@ -38,6 +40,7 @@ public class ItemButton : MonoBehaviour
             toggleDone.interactable = false;
         }
 
+        // por defecto no editable
         labelInput.interactable = false;
         timerInput.interactable = false;
 
@@ -48,32 +51,32 @@ public class ItemButton : MonoBehaviour
         if (editButton != null) editButton.onClick.AddListener(ToggleEditMode);
         if (deleteButton != null) deleteButton.onClick.AddListener(DeleteHabit);
 
-        // Evento para limitar la edición solo a las horas
-        timerInput.onValueChanged.AddListener(RestrictTimerInput);
+        // usar onEndEdit para validar/formatear cuando el usuario termine
+        timerInput.onEndEdit.AddListener(OnTimerEndEdit);
 
         ParseTimerFromInput();
         UpdateTimerDisplay();
+        
+        // 🛑 REGISTRO DEL HÁBITO CREADO (Estado inicial: NO FINALIZADO)
+        // Se asume que este Start() se ejecuta al crear el ítem.
+        RegistrarHabitoEnBD(labelInput.text, totalDurationMinutes, false);
     }
-
+    
     private void AutoAssignIfMissing()
     {
         if (labelInput == null)
-            labelInput = GetComponentInChildren<TMP_InputField>();
-
-        if (labelInput != null && timerInput == null)
         {
             TMP_InputField[] inputs = GetComponentsInChildren<TMP_InputField>();
-            if (inputs.Length >= 2)
+            foreach (var input in inputs)
             {
-                foreach (var input in inputs)
-                {
-                    string n = input.gameObject.name.ToLower();
-                    if (n.Contains("label") || n.Contains("name") || n.Contains("label_tmp"))
-                        labelInput = input;
-                    else if (n.Contains("timer") || n.Contains("time") || n.Contains("timer_tmp"))
-                        timerInput = input;
-                }
+                string n = input.gameObject.name.ToLower();
+                if (n.Contains("label") || n.Contains("name") || n.Contains("label_tmp"))
+                    labelInput = input;
+                else if (n.Contains("timer") || n.Contains("time") || n.Contains("timer_tmp"))
+                    timerInput = input;
             }
+            if (labelInput == null && inputs.Length >= 1) labelInput = inputs[0];
+            if (timerInput == null && inputs.Length >= 2) timerInput = inputs[1];
         }
 
         Button[] buttons = GetComponentsInChildren<Button>();
@@ -86,6 +89,7 @@ public class ItemButton : MonoBehaviour
         }
     }
 
+
     public void StartTimer()
     {
         if (isRunning) return;
@@ -93,11 +97,11 @@ public class ItemButton : MonoBehaviour
         ParseTimerFromInput();
 
         isRunning = true;
-        startButton.interactable = false;
-        editButton.interactable = false;
+        if (startButton != null) startButton.interactable = false;
+        if (editButton != null) editButton.interactable = false;
         labelInput.interactable = false;
         timerInput.interactable = false;
-        toggleDone.interactable = false;
+        if (toggleDone != null) toggleDone.interactable = false;
 
         timerCoroutine = StartCoroutine(TimerCountdown());
     }
@@ -113,12 +117,16 @@ public class ItemButton : MonoBehaviour
             currentTime--;
         }
 
-        timerInput.text = "00:00:00";
+        if (timerInput != null) timerInput.text = "00:00:00";
         if (toggleDone != null) toggleDone.isOn = true;
 
         isRunning = false;
-        startButton.interactable = true;
-        editButton.interactable = true;
+        if (startButton != null) startButton.interactable = true;
+        if (editButton != null) editButton.interactable = true;
+        
+        // 🛑 REGISTRO DE HÁBITO FINALIZADO
+        // Se registra el hábito con el estado FINALIZADO (true)
+        RegistrarHabitoEnBD(labelInput.text, totalDurationMinutes, true);
     }
 
     private void ToggleEditMode()
@@ -129,8 +137,20 @@ public class ItemButton : MonoBehaviour
         labelInput.interactable = isEditing;
         timerInput.interactable = isEditing;
 
-        if (!isEditing)
+        if (isEditing)
         {
+            // prepara el input para editar solo las horas:
+            // deja el texto en formato HH:00:00 y coloca el caret al principio
+            if (string.IsNullOrEmpty(timerInput.text)) timerInput.text = "01:00:00";
+            // activar input field para que el usuario pueda escribir
+            timerInput.ActivateInputField();
+            // poner caret al inicio (la mayoría de versiones de TMP respetan caretPosition)
+            timerInput.caretPosition = 0;
+        }
+        else
+        {
+            // usuario terminó edición -> validar y formatear
+            OnTimerEndEdit(timerInput.text);
             ParseTimerFromInput();
             UpdateTimerDisplay();
         }
@@ -143,21 +163,57 @@ public class ItemButton : MonoBehaviour
         }
     }
 
+    // Formatea y valida cuando el usuario termina de editar (Enter o pierde foco)
+    private void OnTimerEndEdit(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            timerInput.text = "01:00:00";
+            return;
+        }
+
+        // Extraer solo dígitos del input (en orden) hasta 2
+        string digits = "";
+        foreach (char c in input)
+        {
+            if (char.IsDigit(c)) digits += c;
+            if (digits.Length >= 2) break;
+        }
+
+        if (digits.Length == 0) digits = "01";
+        else if (digits.Length == 1) digits = "0" + digits;
+
+        // Formato fijo HH:00:00
+        string formatted = $"{digits}:00:00";
+
+        // Asignar el resultado (sin provocar reentrada infinita)
+        timerInput.text = formatted;
+    }
+
     private void ParseTimerFromInput()
     {
         if (timerInput == null)
         {
             durationInSeconds = 3600;
+            totalDurationMinutes = 60;
             return;
         }
 
         string txt = timerInput.text.Trim();
+        int hours = 0;
 
-        // solo tomamos las horas (primeros 2 dígitos)
-        if (txt.Length >= 2 && int.TryParse(txt.Substring(0, 2), out int hours))
-            durationInSeconds = Mathf.Max(3600, hours * 3600); // al menos 1 hora
+        if (txt.Length >= 2 && int.TryParse(txt.Substring(0, 2), out hours))
+        {
+            // La duración en segundos se actualiza
+            durationInSeconds = Mathf.Max(60, hours * 3600); // Mínimo 1 minuto (60s)
+            // La duración total en minutos para la BD se actualiza
+            totalDurationMinutes = hours * 60; 
+        }
         else
+        {
             durationInSeconds = 3600;
+            totalDurationMinutes = 60;
+        }
     }
 
     private void UpdateTimerDisplay()
@@ -169,21 +225,23 @@ public class ItemButton : MonoBehaviour
             timerInput.text = $"{hours:00}:{minutes:00}:{seconds:00}";
     }
 
-    private void RestrictTimerInput(string value)
+    // -------------------------------------------------------------
+    // FUNCIÓN DE LLAMADA A LA BASE DE DATOS
+    // -------------------------------------------------------------
+    private void RegistrarHabitoEnBD(string nombre, int duracion, bool finalizado)
     {
-        // siempre fuerza el formato HH:00:00 y limita la entrada a 2 dígitos
-        string digits = "";
-        foreach (char c in value)
+        if (ConectorBD.Instance == null)
         {
-            if (char.IsDigit(c)) digits += c;
-            if (digits.Length >= 2) break;
+            Debug.LogError("❌ ConectorBD no está disponible. No se pudo registrar el hábito.");
+            return;
         }
 
-        if (digits.Length == 0) digits = "00";
-        else if (digits.Length == 1) digits = "0" + digits;
-
-        timerInput.text = $"{digits}:00:00";
-        timerInput.caretPosition = 2; // mueve el cursor después de las horas
+        ConectorBD.Instance.RegistrarHabito(nombre, duracion, finalizado);
+    }
+    
+    private void RestrictTimerInput(string value)
+    {
+        // ya no se usa; mantenido por compatibilidad (no ligado)
     }
 
     public void DeleteHabit()

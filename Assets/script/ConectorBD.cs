@@ -46,14 +46,12 @@ public class ConectorBD : MonoBehaviour
             DontDestroyOnLoad(gameObject); 
             Debug.Log("✅ ConectorBD inicializado correctamente y marcado como DontDestroyOnLoad.");
 
-            // 🛑 NUEVA LÓGICA DE INICIALIZACIÓN DE ESCENA (Paso B)
-            // Asumimos que la escena de bienvenida es la que contiene este objeto al inicio.
+            // 🛑 LÓGICA DE INICIALIZACIÓN DE ESCENA
             string currentScene = SceneManager.GetActiveScene().name;
             
-            // Si la escena actual es "login" (o la que tú uses como InitScene), cargamos la siguiente.
+            // Si la escena actual es "login" (la InitScene), cargamos la siguiente.
             if (currentScene == "login") 
             {
-                // Cargamos la escena donde el usuario empieza a interactuar (el formulario de entrada/login)
                 Debug.Log($"➡️ Iniciando con escena '{currentScene}'. Cargando: entrar.");
                 SceneManager.LoadScene("entrar"); 
             }
@@ -111,7 +109,6 @@ public class ConectorBD : MonoBehaviour
         string correo = inputCorreo.text.Trim();
         string contrasena = inputContrasena.text.Trim();
 
-        // **NOTA DE MODIFICACIÓN:** Las validaciones deben ser flexibles con el teléfono (VARCHAR)
         if (!ValidarDatosDeRegistro(nombre, apellidos, telefono, correo, contrasena)) return; 
 
         InsertarNuevoUsuario(nombre, apellidos, telefono, correo, contrasena);
@@ -132,13 +129,6 @@ public class ConectorBD : MonoBehaviour
             MostrarMensaje("🔴 Error: Por favor, rellena el campo Teléfono.", true);
             return false;
         }
-        
-        // ❌ ELIMINAMOS la validación de solo números, ya que la columna es VARCHAR
-        // if (!long.TryParse(telefono, out long result)) 
-        // {
-        //     MostrarMensaje("🔴 Error: El teléfono debe contener solo números.", true);
-        //     return false;
-        // }
         
         return true;
     }
@@ -169,16 +159,13 @@ public class ConectorBD : MonoBehaviour
             inputTelefono.text = "";
             inputCorreo.text = "";
             inputContrasena.text = "";
-            
-            // Opcional: Redirige al login después de un registro exitoso
-            // StartCoroutine(CargarEscenaConDelay("entrar", 1.5f)); 
         }
         catch (MySqlException ex)
         {
             string mensajeError;
             
             if (ex.Number == 1062) mensajeError = "🔴 Error: Este correo electrónico ya está registrado.";
-            else if (ex.Number == 1366) mensajeError = "🔴 Error en el formato de datos (ej. Teléfono no es número). Verifica phpMyAdmin."; // Código de error de tipo incorrecto
+            else if (ex.Number == 1366) mensajeError = "🔴 Error en el formato de datos (ej. Teléfono no es número). Verifica phpMyAdmin."; 
             else mensajeError = $"🔴 Error de registro inesperado. Intente de nuevo. (Código: {ex.Number})";
             
             Debug.LogError($"❌ Error al insertar usuario (Código {ex.Number}): {ex.Message}");
@@ -348,6 +335,54 @@ public class ConectorBD : MonoBehaviour
             
             Debug.LogError($"❌ Error de UPDATE (Código {ex.Number}): {ex.Message}");
             return false;
+        }
+        finally
+        {
+            CloseConnection();
+        }
+    }
+
+    // ============================= GESTIÓN DE HÁBITOS (NUEVO) =============================
+
+    /// <summary>
+    /// Registra un hábito o su finalización en la base de datos.
+    /// </summary>
+    /// <param name="nombreHabito">Nombre del hábito (ej: Leer).</param>
+    /// <param name="duracionMinutos">Duración total del hábito en minutos.</param>
+    /// <param name="finalizado">True si el hábito se completó, False si solo se creó o se interrumpió.</param>
+    public void RegistrarHabito(string nombreHabito, int duracionMinutos, bool finalizado)
+    {
+        // 1. Verificación: Aseguramos que el usuario esté logueado
+        if (string.IsNullOrEmpty(ConectorBD.UsuarioLogueadoCorreo))
+        {
+            Debug.LogError("❌ No hay usuario logueado. No se puede registrar el hábito.");
+            return;
+        }
+
+        if (!OpenConnection()) return; 
+
+        try
+        {
+            // La tabla 'tabla_habitos' debe existir y tener estas columnas.
+            // Usamos NOW() para registrar la fecha y hora de la acción.
+            string sql = "INSERT INTO tabla_habitos (CorreoUsuario, Nombre, DuracionMinutos, Finalizado, FechaRegistro) VALUES (@correo, @nombre, @duracion, @finalizado, NOW())";
+
+            MySqlCommand command = new MySqlCommand(sql, dbconnection);
+
+            command.Parameters.AddWithValue("@correo", ConectorBD.UsuarioLogueadoCorreo);
+            command.Parameters.AddWithValue("@nombre", nombreHabito);
+            command.Parameters.AddWithValue("@duracion", duracionMinutos);
+            // MySQL usa 1 para TRUE, 0 para FALSE
+            command.Parameters.AddWithValue("@finalizado", finalizado ? 1 : 0); 
+            
+            command.ExecuteNonQuery();
+            
+            Debug.Log($"✅ Hábito registrado: '{nombreHabito}'. Duración: {duracionMinutos} min. Finalizado: {finalizado}.");
+        }
+        catch (MySqlException ex)
+        {
+            // Esto es importante para detectar si la tabla 'tabla_habitos' no existe o hay un problema de columnas
+            Debug.LogError($"❌ Error al registrar el hábito (Código {ex.Number}): {ex.Message}");
         }
         finally
         {
