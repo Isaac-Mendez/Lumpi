@@ -24,7 +24,7 @@ public class ConectorBD : MonoBehaviour
 
     // *** VARIABLES PÚBLICAS (Inputs) ***
     [Header("Formulario de Registro/Login (Inputs)")]
-    // Estos inputs deben estar enlazados en la escena 'registro_del_login' o 'entrar'
+    // Estos inputs deben ser ASIGNADOS en la escena de registro/login.
     public TMP_InputField inputNombre;
     public TMP_InputField inputApellidos;
     public TMP_InputField inputTelefono;
@@ -42,14 +42,11 @@ public class ConectorBD : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            // Aseguramos que el gestor de BD persista entre escenas
             DontDestroyOnLoad(gameObject); 
             Debug.Log("✅ ConectorBD inicializado correctamente y marcado como DontDestroyOnLoad.");
 
-            // 🛑 LÓGICA DE INICIALIZACIÓN DE ESCENA
             string currentScene = SceneManager.GetActiveScene().name;
             
-            // Si la escena actual es "login" (la InitScene), cargamos la siguiente.
             if (currentScene == "login") 
             {
                 Debug.Log($"➡️ Iniciando con escena '{currentScene}'. Cargando: entrar.");
@@ -58,7 +55,6 @@ public class ConectorBD : MonoBehaviour
         }
         else
         {
-            // Destruimos duplicados
             Destroy(gameObject);
             return;
         }
@@ -68,7 +64,27 @@ public class ConectorBD : MonoBehaviour
     {
         if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
         if (textoMensajeExito != null) textoMensajeExito.gameObject.SetActive(false);
+        
+        // El script AsignadorDeInputs se encargará de asignar las referencias de Input en las escenas de formulario.
     }
+
+    // ============================= GESTIÓN DE REFERENCIAS (FUNCIÓN FALTANTE) =============================
+
+    /// <summary>
+    /// Permite a cualquier escena con el formulario reasignar los InputFields
+    /// al Singleton de ConectorBD. DEBE ser llamado en el Start() de la escena de registro/login por el AsignadorDeInputs.
+    /// </summary>
+    public void SetRegistrationInputReferences(TMP_InputField nombre, TMP_InputField apellidos, TMP_InputField telefono, TMP_InputField correo, TMP_InputField contrasena)
+    {
+        inputNombre = nombre;
+        inputApellidos = apellidos;
+        inputTelefono = telefono;
+        inputCorreo = correo; 
+        inputContrasena = contrasena; 
+        Debug.Log("✅ Referencias de InputFields (Registro/Login) asignadas desde la escena actual.");
+    }
+    
+    // ---------------------------------------------------------------------------------------------
 
     // --- FUNCIÓN DE CONEXIÓN BÁSICA ---
     private bool OpenConnection()
@@ -103,6 +119,13 @@ public class ConectorBD : MonoBehaviour
         if (textoMensajeError != null) textoMensajeError.gameObject.SetActive(false);
         if (textoMensajeExito != null) textoMensajeExito.gameObject.SetActive(false);
 
+        if (inputCorreo == null || inputContrasena == null)
+        {
+             Debug.LogError("🔴 Error: Los campos de Correo o Contraseña no están asignados. Llama a SetRegistrationInputReferences.");
+             MostrarMensaje("🔴 Error de configuración: Los inputs no están conectados. Revisa el AsignadorDeInputs.", true);
+             return;
+        }
+        
         string nombre = inputNombre.text.Trim();
         string apellidos = inputApellidos.text.Trim();
         string telefono = inputTelefono.text.Trim(); 
@@ -116,14 +139,12 @@ public class ConectorBD : MonoBehaviour
 
     private bool ValidarDatosDeRegistro(string nombre, string apellidos, string telefono, string correo, string contrasena)
     {
-        // Validación de campos obligatorios
         if (string.IsNullOrEmpty(nombre) || string.IsNullOrEmpty(correo) || string.IsNullOrEmpty(contrasena))
         {
             MostrarMensaje("🔴 Error: Nombre, Correo y Contraseña son obligatorios.", true);
             return false; 
         }
 
-        // Permitimos que teléfono sea cadena (VARCHAR), pero no vacío si es obligatorio
         if (string.IsNullOrEmpty(telefono)) 
         {
             MostrarMensaje("🔴 Error: Por favor, rellena el campo Teléfono.", true);
@@ -153,7 +174,6 @@ public class ConectorBD : MonoBehaviour
             
             MostrarMensaje($"✅ Usuario {nombre} registrado con éxito. ¡Ya puedes iniciar sesión!", false);
 
-            // Limpia los campos
             inputNombre.text = "";
             inputApellidos.text = "";
             inputTelefono.text = "";
@@ -187,7 +207,7 @@ public class ConectorBD : MonoBehaviour
         if (inputCorreo == null || inputContrasena == null)
         {
              Debug.LogError("🔴 Error: Los campos de Correo o Contraseña no están asignados por el script de la escena.");
-             MostrarMensaje("🔴 Error: Configuración de la escena 'entrar' incorrecta.", true);
+             MostrarMensaje("🔴 Error: Configuración de la escena 'entrar' incorrecta. Reasigna los inputs.", true);
              return;
         }
         
@@ -208,7 +228,7 @@ public class ConectorBD : MonoBehaviour
             MostrarMensaje("🔴 Error: Correo o contraseña incorrectos.", true);
         }
     }
-
+    
     private IEnumerator CargarEscenaConDelay(string escenaDestino, float delay)
     {
         yield return new WaitForSeconds(delay);
@@ -290,7 +310,6 @@ public class ConectorBD : MonoBehaviour
     {
         mensajeError = "";
         
-        // Validación en C# antes de enviar a la BD (MÁS FLEXIBLE CON TELÉFONO)
         if (string.IsNullOrEmpty(nuevoNombre) || string.IsNullOrEmpty(nuevoCorreo) || string.IsNullOrEmpty(nuevaContrasena) || string.IsNullOrEmpty(nuevoTelefono))
         {
             mensajeError = "🔴 Error: Por favor, rellena todos los campos de perfil correctamente.";
@@ -320,7 +339,6 @@ public class ConectorBD : MonoBehaviour
             
             if (rowsAffected > 0)
             {
-                // Si el correo ha cambiado, actualizamos la sesión
                 if (correoAntiguo != nuevoCorreo) ConectorBD.UsuarioLogueadoCorreo = nuevoCorreo;
                 return true;
             }
@@ -342,17 +360,10 @@ public class ConectorBD : MonoBehaviour
         }
     }
 
-    // ============================= GESTIÓN DE HÁBITOS (NUEVO) =============================
+    // ============================= GESTIÓN DE HÁBITOS =============================
 
-    /// <summary>
-    /// Registra un hábito o su finalización en la base de datos.
-    /// </summary>
-    /// <param name="nombreHabito">Nombre del hábito (ej: Leer).</param>
-    /// <param name="duracionMinutos">Duración total del hábito en minutos.</param>
-    /// <param name="finalizado">True si el hábito se completó, False si solo se creó o se interrumpió.</param>
     public void RegistrarHabito(string nombreHabito, int duracionMinutos, bool finalizado)
     {
-        // 1. Verificación: Aseguramos que el usuario esté logueado
         if (string.IsNullOrEmpty(ConectorBD.UsuarioLogueadoCorreo))
         {
             Debug.LogError("❌ No hay usuario logueado. No se puede registrar el hábito.");
@@ -363,8 +374,6 @@ public class ConectorBD : MonoBehaviour
 
         try
         {
-            // La tabla 'tabla_habitos' debe existir y tener estas columnas.
-            // Usamos NOW() para registrar la fecha y hora de la acción.
             string sql = "INSERT INTO tabla_habitos (CorreoUsuario, Nombre, DuracionMinutos, Finalizado, FechaRegistro) VALUES (@correo, @nombre, @duracion, @finalizado, NOW())";
 
             MySqlCommand command = new MySqlCommand(sql, dbconnection);
@@ -372,7 +381,6 @@ public class ConectorBD : MonoBehaviour
             command.Parameters.AddWithValue("@correo", ConectorBD.UsuarioLogueadoCorreo);
             command.Parameters.AddWithValue("@nombre", nombreHabito);
             command.Parameters.AddWithValue("@duracion", duracionMinutos);
-            // MySQL usa 1 para TRUE, 0 para FALSE
             command.Parameters.AddWithValue("@finalizado", finalizado ? 1 : 0); 
             
             command.ExecuteNonQuery();
@@ -381,7 +389,6 @@ public class ConectorBD : MonoBehaviour
         }
         catch (MySqlException ex)
         {
-            // Esto es importante para detectar si la tabla 'tabla_habitos' no existe o hay un problema de columnas
             Debug.LogError($"❌ Error al registrar el hábito (Código {ex.Number}): {ex.Message}");
         }
         finally
