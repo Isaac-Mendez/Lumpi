@@ -3,20 +3,7 @@
 
 El diseño de Lumpi comenzó con una planificación visual básica para definir cómo se distribuirían las scene, dónde irían los elementos interactivos y cuál sería la identidad estética. Antes de desarrollar la interfaz final en Unity, se elaboraron una serie de wireframes que sirvieron como guía visual y conceptual. Estos bocetos representaban la estructura de cada escena con colores básicos y elementos  gráficos poco detallados, centrándose únicamente en la organización.
 
-A continuación se muestran las ubicaciones donde deben insertarse los wireframes correspondientes:
 
-- _(Aquí va el wireframe: WF_Bienvenida.png)_
-    
-- _(Aquí va el wireframe: WF_Login.png)_
-    
-- _(Aquí va el wireframe: WF_Registro.png)_
-    
-- _(Aquí va el wireframe: WF_Habitos.png)_
-    
-- _(Aquí va el wireframe: WF_Perfil.png)_
-    
-- _(Aquí va el wireframe: WF_Progreso.png)_
-    
 
 Estos diseños previos permitieron visualizar el flujo lógico del usuario y prever la disposición de botones, inputs y paneles.
 
